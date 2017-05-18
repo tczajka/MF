@@ -28,13 +28,11 @@ bin :
 obj/%.cmi : obj/%.mli obj/%.mli.d
 	$(OCAMLOPT) -I obj -c $<
 
-obj/%.cmx : obj/%.ml obj/%.cmi obj/%.ml.d
-	$(OCAMLOPT) -I obj -c $<
-
 obj/%.cmx : obj/%.ml obj/%.ml.d
 	$(OCAMLOPT) -I obj -c $<
 
-obj/%.d : src/% | obj
+# TODO: this should depend on all source files
+obj/%.d : obj/%
 	$(OCAMLDEP) -native -I src $< > $@
 
 -include $(MODULES:%=obj/%.mli.d)
