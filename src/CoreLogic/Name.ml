@@ -1,5 +1,5 @@
 (**
- * Defines names of various elements of terms.
+ * Names of various things: type constructors, constants, variables.
  *
  * @author Tomek Czajka, 2017
  *)
