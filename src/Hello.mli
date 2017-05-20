@@ -1,1 +1,0 @@
-val hello : Types.text
