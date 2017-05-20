@@ -53,7 +53,7 @@ type builtin_constant =
  *)
 type hol_type =
   (* A type variable, e.g. "a". *)
-  | TypeVariable of Names.name
+  | TypeVariable of Name.name
   (* A type constructor application, e.g. "a -> bool". *)
   | TypeApplication of type_constructor * hol_type list
 
@@ -66,7 +66,7 @@ type hol_type =
  * The definition is included here so that we can compare types.
  * Types with different definitions compare unequal even if they have the same name and arity.
  *)
-and type_constructor = TypeConstructor of Names.name * int (* arity *) * type_definition
+and type_constructor = TypeConstructor of Name.name * int (* arity *) * type_definition
 
 (* Definition of a type. *)
 and type_definition =
@@ -81,8 +81,9 @@ and type_definition =
  * The definition is included here so that we can compare constants.
  * Constants with different definitions compare unequal even if the have the same name and type.
  *)
-and constant = Constant of name * hol_type * constant_definition
+and constant = Constant of Name.name * hol_type * constant_definition
 
+(* Definition of a constant. *)
 and constant_definition =
   (* Built-in. *)
   | ConstantDefinitionBuiltin of builtin_constant
@@ -101,5 +102,5 @@ and term =
   | TermConstant of constant
   (* Function application, e.g. "f x". *)
   | TermApplication of term * term
-  (* Function abstruction, e.g. "fun x . x + 1". *)
+  (* Function abstraction, e.g. "fun x . x + 1". *)
   | TermAbstraction of name * term
