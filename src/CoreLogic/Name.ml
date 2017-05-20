@@ -66,7 +66,7 @@ type token_syntax =
  *)
 type identifier = string
 
-(**
+(*
  * Names of things that can appear in terms.
  *)
 type name = Name of identifier * token_syntax

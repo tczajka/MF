@@ -9,7 +9,7 @@ type builtin_type =
   (*
    * Type of booleans, "bool".
    *
-   * It the type of truth claims.
+   * It is the type of truth claims, true or false.
    *)
   | Bool
   (*
@@ -17,13 +17,13 @@ type builtin_type =
    *
    * It is parametrized by the source type and the destination type.
    *)
-  | Function (* "->" *)
+  | Function
   (*
    * An infinite type, "infinite_type".
    *
    * This is used so that we can define other infinite types such as natural numbers or real numbers.
    *)
-  | InfiniteType (* "infinite_type" *)
+  | InfiniteType
 
 (* Built-in constant. *)
 type builtin_constant =
@@ -86,10 +86,10 @@ and constant = Constant of name * hol_type * constant_definition
 and constant_definition =
   (* Built-in. *)
   | ConstantDefinitionBuiltin of builtin_constant
-  (* Defined via a term. *)
+  (* Defined to be equivalent to a given term. *)
   | ConstantDefinitionTerm of term
 
-(**
+(*
  * Term.
  *
  * E.g. "x + y" or "3 < 4".
