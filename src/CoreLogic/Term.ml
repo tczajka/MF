@@ -6,16 +6,42 @@
 
 (* Built-in type. *)
 type builtin_type =
-  | Bool (* "bool" *)
+  (*
+   * Type of booleans, "bool".
+   *
+   * It the type of truth claims.
+   *)
+  | Bool
+  (*
+   * Type of functions, "a -> b".
+   *
+   * It is parametrized by the source type and the destination type.
+   *)
   | Function (* "->" *)
+  (*
+   * An infinite type, "infinite_type".
+   *
+   * This is used so that we can define other infinite types such as natural numbers or real numbers.
+   *)
   | InfiniteType (* "infinite_type" *)
 
 (* Built-in constant. *)
 type builtin_constant =
-  | Equal (* "=" *)
-  | Choose (* "choose" *)
-  | InfiniteTypeFirst (* "infinite_type_first" *)
-  | InfiniteTypeNext (* "infinite_type_next" *)
+  (*
+   * "(=) : a -> a -> bool".
+   *
+   * Equality.
+   *)
+  | Equal
+  (*
+   * "choose : (a -> bool) -> a".
+   *
+   * Arbitrary choice function
+   *
+   * Given a predicate that is true for some values, provides any such value.
+   * If the predicate is never true, provides any value.
+   *)
+  | Choose
 
 (*
  * A higher order logic type.
@@ -38,7 +64,7 @@ type hol_type =
  * "->" is a type constructor with 2 arguments.
  *
  * The definition is included here so that we can compare types.
- * Types with different definitions compare unequal even if they have the same name.
+ * Types with different definitions compare unequal even if they have the same name and arity.
  *)
 and type_constructor = TypeConstructor of Names.name * int (* arity *) * type_definition
 
@@ -53,7 +79,7 @@ and type_definition =
  * Constant.
  *
  * The definition is included here so that we can compare constants.
- * Constants with different definitions compare unequal even if the have the same name.
+ * Constants with different definitions compare unequal even if the have the same name and type.
  *)
 and constant = Constant of name * hol_type * constant_definition
 
