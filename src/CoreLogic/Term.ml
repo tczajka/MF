@@ -1,7 +1,7 @@
 (*
  * Types, constants and terms.
  *
- * @author Tomek Czajka, 2017
+ * Author: Tomek Czajka, 2017.
  *)
 
 (* Built-in type. *)
