@@ -42,6 +42,22 @@ type builtin_constant =
    * If the predicate is never true, provides any value.
    *)
   | Choose
+  (*
+   * "infinite_type_first : infinite_type"
+   *
+   * An element of the infinite type that is not a successor of any other element.
+   *)
+  | InfiniteTypeFirst
+  (*
+   * "infinite_type_next : infinite_type : infinite_type"
+   *
+   * The successor of a given element of infinite_type.
+   *
+   * The successor function is one-to-one and not onto (because
+   * infinite_type_first is never a successor), guaranteeing that
+   * infinite_type is actually infinite.
+   *)
+  | InfiniteTypeNext
 
 (*
  * A higher order logic type.
@@ -91,16 +107,23 @@ and constant_definition =
   | ConstantDefinitionTerm of term
 
 (*
+ * Variable.
+ *
+ * Consists of a name and a type.
+ *)
+and variable = Variable of Name.name * hol_type
+
+(*
  * Term.
  *
  * E.g. "x + y" or "3 < 4".
  *)
 and term =
   (* A variable, e.g. "p : bool". *)
-  | TermVariable of name * hol_type
+  | TermVariable of variable
   (* A constant, e.g. "true : bool" or "(+) : natural -> natural -> natural" *)
   | TermConstant of constant
   (* Function application, e.g. "f x". *)
   | TermApplication of term * term
   (* Function abstraction, e.g. "fun x . x + 1". *)
-  | TermAbstraction of name * term
+  | TermAbstraction of variable * term
