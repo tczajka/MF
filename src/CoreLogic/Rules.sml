@@ -89,8 +89,11 @@ structure Rules :> sig
     (* A bound variable. 0 is the closest bound variable, 1 next closest, etc. *)
   | TermBoundVariable of int
 
-    (* A constant, e.g. "true" or "+" *)
-  | TermConstant of constant
+    (* A constant, e.g. "true" or "+".
+     *
+     * Contains a type because constants can be specialized.
+     *)
+  | TermConstant of constant * hol_type
 
     (* Function application, e.g. "f x". *)
   | TermApplication of term * term
@@ -111,14 +114,14 @@ structure Rules :> sig
   (*
    * Primitive constant: equality ("=").
    *)
-  val equality: constant
+  val equal : constant
 
   (*
    * Axiom: equality is reflexive.
    *
    * |- x:a = x:a
    *)
-  val equality_reflexive : theorem
+  val equal_reflexive : theorem
 
 end = struct
 
@@ -152,27 +155,87 @@ end = struct
   and term =
     TermFreeVariable of variable_name * hol_type
   | TermBoundVariable of int
-  | TermConstant of constant
+  | TermConstant of constant * hol_type
   | TermApplication of term * term
   | TermAbstraction of hol_type * term
 
-  val boolean_constructor = TypeConstructor ("bool", 0, TypeDefinitionPrimitive)
-  val boolean = TypeApplication (boolean_constructor, [])
+  (*
+   * Primitive types.
+   *)
+  val boolean_constructor : type_constructor =
+    TypeConstructor ("bool", 0, TypeDefinitionPrimitive)
 
-  val function = TypeConstructor ("->", 2, TypeDefinitionPrimitive)
+  val boolean : hol_type =
+    TypeApplication (boolean_constructor, [])
 
-  val equality =
+  val function : type_constructor =
+    TypeConstructor ("->", 2, TypeDefinitionPrimitive)
+
+  fun make_function_type (a : hol_type, b : hol_type) : hol_type =
+    TypeApplication (function, [a, b])
+
+  (*
+   * Primitive constant "=".
+   *)
+  val equal : constant =
     Constant ("=",
               TypeApplication (function, [TypeVariable "a", TypeVariable "a"]),
               ConstantDefinitionPrimitive)
 
-  (* |- x:a = x:a *)
-  val equality_reflexive =
+  (*
+   * A list of bound variable types.
+   *
+   * First element is the closest binding.
+   *)
+  type bound_variables = hol_type list
+
+  (*
+   * Type of a term in a bound variable context.
+   *
+   * Assumes the term is well-formed.
+   *
+   * FIXME: This should probably not assume that.
+   *)
+  fun type_of_subterm (bound : bound_variables) : term -> hol_type = fn
+    TermFreeVariable (_, typ) => typ
+  | TermBoundVariable i => List.nth (bound, i)
+  | TermConstant (_, typ) => typ
+  | TermApplication (f, _) => (
+      case type_of_subterm bound f of
+        TypeApplication (type_constructor, [_, return_type]) =>
+          if type_constructor = function then
+            return_type
+          else
+            raise Fail "Non-function in function application"
+      | _ => raise Fail "Non-function in function application")
+  | TermAbstraction (variable_type, t) =>
+      make_function_type (variable_type, type_of_subterm (variable_type :: bound) t)
+
+  val type_of_term = type_of_subterm []
+
+  (*
+   * "x = y"
+   *
+   * Assumes x and y are well formed and have the same type.
+   *
+   * FIXME: This should probably not assume that.
+   *)
+  fun make_equality (x:term, y:term) : term =
+    let
+      val t = type_of_term x
+      val eq_t = make_function_type (t, make_function_type (t, boolean))
+    in
+      TermApplication (TermApplication (TermConstant (equal, eq_t), x), y)
+    end
+
+  (*
+   * |- x:a = x:a
+   *)
+  val equal_reflexive : theorem =
     let
       val x = TermFreeVariable ("x", TypeVariable "a")
     in
-      Theorem ([],
-        TermApplication (TermApplication (TermConstant equality, x), x))
+      Theorem ([], make_equality (x, x))
     end
 
 end
