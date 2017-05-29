@@ -77,14 +77,14 @@ structure Rules :> sig
     ConstantDefinitionPrimitive
   
   (*
-   * Untyped term.
+   * Term.
    *
    * E.g. "x + y" or "3 < 4".
    *)
-  and untyped_term =
+  and term =
 
     (* A free variable, e.g. "x". *)
-    TermFreeVariable of variable_name
+    TermFreeVariable of variable_name * hol_type
 
     (* A bound variable. 0 is the closest bound variable, 1 next closest, etc. *)
   | TermBoundVariable of int
@@ -99,10 +99,26 @@ structure Rules :> sig
   | TermAbstraction of hol_type * term
 
   (*
-   * Term with an assigned type.
+   * Primitive type: boolean ("bool").
    *)
-  and term =
-    Term of untyped_term * hol_type
+  val boolean : hol_type
+
+  (*
+   * Primitive type constructor: function ("->").
+   *)
+  val function : type_constructor
+
+  (*
+   * Primitive constant: equality ("=").
+   *)
+  val equality: constant
+
+  (*
+   * Axiom: equality is reflexive.
+   *
+   * |- x:a = x:a
+   *)
+  val equality_reflexive : theorem
 
 end = struct
 
@@ -133,14 +149,30 @@ end = struct
   and constant_definition =
     ConstantDefinitionPrimitive
   
-  and untyped_term =
-    TermFreeVariable of variable_name
+  and term =
+    TermFreeVariable of variable_name * hol_type
   | TermBoundVariable of int
   | TermConstant of constant
   | TermApplication of term * term
   | TermAbstraction of hol_type * term
 
-  and term =
-    Term of untyped_term * hol_type
+  val boolean_constructor = TypeConstructor ("bool", 0, TypeDefinitionPrimitive)
+  val boolean = TypeApplication (boolean_constructor, [])
+
+  val function = TypeConstructor ("->", 2, TypeDefinitionPrimitive)
+
+  val equality =
+    Constant ("=",
+              TypeApplication (function, [TypeVariable "a", TypeVariable "a"]),
+              ConstantDefinitionPrimitive)
+
+  (* |- x:a = x:a *)
+  val equality_reflexive =
+    let
+      val x = TermFreeVariable ("x", TypeVariable "a")
+    in
+      Theorem ([],
+        TermApplication (TermApplication (TermConstant equality, x), x))
+    end
 
 end
