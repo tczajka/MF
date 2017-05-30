@@ -79,11 +79,6 @@ structure Rules :> sig
   | TermAbstraction of hol_type * term
 
   (*
-   * Logical exception is thrown in case of a logical error.
-   *)
-  exception LogicalException of string
-
-  (*
    * Primitive type: boolean ("bool").
    *)
   val boolean : hol_type
@@ -166,12 +161,6 @@ end = struct
   | TermConstant of constant * hol_type list
   | TermApplication of term * term
   | TermAbstraction of hol_type * term
-
-  exception LogicalException of string
-
-  fun list_nth ([], _) = raise LogicalException "list_nth"
-    | list_nth ((x :: _), 0) = x
-    | list_nth ((_ :: xs), n) = list_nth (xs, n-1)
 
   (*
    * Primitive types.
