@@ -10,96 +10,78 @@
 
 structure Rules :> sig
 
-  type variable_name = string
   type constant_name = string
-  type type_variable_name = string
-  type type_constant_name = string
+  type type_name = string
 
   (*
    * Theorem.
    *
-   * This is an abstract type.
-   *
-   * This guarantees that theorems can only be generated from axioms and
-   * inference rules.
+   * This is an abstract type.  This guarantees that theorems can only be
+   * generated from axioms and inference rules.
    *)
   type theorem
+
+  (*
+   * Type constant (potentially polymorphic).
+   *
+   * This is an abstract type. This guarantees that type constants can only be
+   * defined in a valid way.
+   *)
+  type type_constant
+
+  (*
+   * Constant (potentially polymorphic).
+   *
+   * This is an abstract type. This guarantees that constants can only be
+   * defined in a valid way.
+   *)
+  type constant
 
   (*
    * A higher order logic type.
    *
    * For example, "a -> bool" is a polymorphic type with a type functor "->"
-   * applied to the type variable "a" and the type constant "bool".
+   * applied to the type variable "a" and the type "bool".
+   *
+   * For uniformity, a non-polymorphic type is represented as a polymorphic
+   * type with 0 arguments.
    *)
   datatype hol_type =
 
-    (* A type variable, e.g. "a". *)
-    TypeVariable of type_variable_name
+    (* A type variable. Index into the list of type variables. *)
+    TypeVariable of int
 
-    (* A type constructor application, e.g. "a -> bool". *)
-  | TypeApplication of type_constructor * hol_type list
+    (* A type constant applied to type arguments, e.g. "a -> bool". *)
+  | TypeApplication of type_constant * hol_type list
 
-  (*
-   * Type constructor.
-   *
-   * "bool" is a type constructor with 0 arguments.
-   * "->" is a type constructor with 2 arguments.
-   *
-   * The definition is included here so that we can compare types.
-   * Types with different definitions compare unequal even if they have the same name and arity.
-   *)
-  and type_constructor =
-    TypeConstructor of type_constant_name * int (* arity *) * type_definition
-
-  (*
-   * Definition of a type or a type constructor.
-   *)
-  and type_definition =
-
-    (* Undefined, primitive type. *)
-    TypeDefinitionPrimitive
-
-  (*
-   * Constant.
-   *
-   * The definition is included here so that we can compare constants.
-   * Constants with different definitions compare unequal even if the have the same name and type.
-   *)
-  and constant =
-    Constant of constant_name * hol_type * constant_definition
-
-  (*
-   * Definition of a constant.
-   *)
-  and constant_definition =
-
-    (* Undefined, primitive constant. *)
-    ConstantDefinitionPrimitive
   
   (*
    * Term.
    *
    * E.g. "x + y" or "3 < 4".
    *)
-  and term =
+  datatype term =
 
-    (* A free variable, e.g. "x". *)
-    TermFreeVariable of variable_name * hol_type
+    (* A variable. 0 is the closest bound variable, 1 next closest, etc. *)
+    TermVariable of int
 
-    (* A bound variable. 0 is the closest bound variable, 1 next closest, etc. *)
-  | TermBoundVariable of int
-
-    (* A constant, e.g. "true" or "+".
+    (*
+     * A constant, e.g. "true" or "+".
      *
-     * Contains a type because constants can be specialized.
+     * Polymorphic constants are applied to a number of type arguments.
      *)
-  | TermConstant of constant * hol_type
+  | TermConstant of constant * hol_type list
 
     (* Function application, e.g. "f x". *)
   | TermApplication of term * term
 
     (* Function abstraction, e.g. "fun x x + 1". *)
   | TermAbstraction of hol_type * term
+
+  (*
+   * Logical exception is thrown in case of a logical error.
+   *)
+  exception LogicalException of string
 
   (*
    * Primitive type: boolean ("bool").
@@ -109,7 +91,7 @@ structure Rules :> sig
   (*
    * Primitive type constructor: function ("->").
    *)
-  val function : type_constructor
+  val function : type_constant
 
   (*
    * Primitive constant: equality ("=").
@@ -125,117 +107,103 @@ structure Rules :> sig
 
 end = struct
 
-  type variable_name = string
   type constant_name = string
-  type type_variable_name = string
-  type type_constant_name = string
+  type type_name = string
 
   (*
    * A theorem is a list of assumptions and the conclusion.
+   * It may be polymorpic and contain some free variables.
    *)
   datatype theorem =
-    Theorem of term list * term
+    Theorem of int (* num type arguments *)
+             * hol_type list (* free variables *)
+             * term list (* assumptions *)
+             * term (* conclusion *)
 
   and hol_type =
-    TypeVariable of type_variable_name
-  | TypeApplication of type_constructor * hol_type list
+    TypeVariable of int
+  | TypeApplication of type_constant * hol_type list
 
-  and type_constructor =
-    TypeConstructor of type_constant_name * int (* arity *) * type_definition
+  (*
+   * A type constant.
+   *
+   * It may be polymorphic.
+   *
+   * The definition is included here so that we can compare types.
+   *)
+  and type_constant =
+    TypeConstant of type_name
+                  * int (* num type arguments *)
+                  * type_definition
 
+  (*
+   * Definition of a type constant
+   *)
   and type_definition =
-    TypeDefinitionPrimitive
+    TypeDefinitionPrimitive (* Undefined, primitive type. *)
 
+  (*
+   * Constant.
+   *
+   * It can be polymorphic.
+   *
+   * The definition is included here so that we can compare constants.
+   *)
   and constant =
-    Constant of constant_name * hol_type * constant_definition
+    Constant of constant_name
+              * int (* num type arguments *)
+              * hol_type (* constant type *)
+              * constant_definition
 
+  (*
+   * Definition of a constant.
+   *)
   and constant_definition =
-    ConstantDefinitionPrimitive
-  
+    ConstantDefinitionPrimitive (* Undefined, primitive constant. *)
+
   and term =
-    TermFreeVariable of variable_name * hol_type
-  | TermBoundVariable of int
-  | TermConstant of constant * hol_type
+    TermVariable of int
+  | TermConstant of constant * hol_type list
   | TermApplication of term * term
   | TermAbstraction of hol_type * term
+
+  exception LogicalException of string
+
+  fun list_nth ([], _) = raise LogicalException "list_nth"
+    | list_nth ((x :: _), 0) = x
+    | list_nth ((_ :: xs), n) = list_nth (xs, n-1)
 
   (*
    * Primitive types.
    *)
-  val boolean_constructor : type_constructor =
-    TypeConstructor ("bool", 0, TypeDefinitionPrimitive)
-
   val boolean : hol_type =
-    TypeApplication (boolean_constructor, [])
+    TypeApplication (TypeConstant ("bool", 0, TypeDefinitionPrimitive), [])
 
-  val function : type_constructor =
-    TypeConstructor ("->", 2, TypeDefinitionPrimitive)
-
-  fun make_function_type (a : hol_type, b : hol_type) : hol_type =
-    TypeApplication (function, [a, b])
+  val function : type_constant =
+    TypeConstant ("->", 2, TypeDefinitionPrimitive)
 
   (*
    * Primitive constant "=".
    *)
   val equal : constant =
     Constant ("=",
-              TypeApplication (function, [TypeVariable "a", TypeVariable "a"]),
+              1,
+              TypeApplication (function, [TypeVariable 0, TypeVariable 0]),
               ConstantDefinitionPrimitive)
-
-  (*
-   * A list of bound variable types.
-   *
-   * First element is the closest binding.
-   *)
-  type bound_variables = hol_type list
-
-  (*
-   * Type of a term in a bound variable context.
-   *
-   * Assumes the term is well-formed.
-   *
-   * FIXME: This should probably not assume that.
-   *)
-  fun type_of_subterm (bound : bound_variables) : term -> hol_type = fn
-    TermFreeVariable (_, typ) => typ
-  | TermBoundVariable i => List.nth (bound, i)
-  | TermConstant (_, typ) => typ
-  | TermApplication (f, _) => (
-      case type_of_subterm bound f of
-        TypeApplication (type_constructor, [_, return_type]) =>
-          if type_constructor = function then
-            return_type
-          else
-            raise Fail "Non-function in function application"
-      | _ => raise Fail "Non-function in function application")
-  | TermAbstraction (variable_type, t) =>
-      make_function_type (variable_type, type_of_subterm (variable_type :: bound) t)
-
-  val type_of_term = type_of_subterm []
-
-  (*
-   * "x = y"
-   *
-   * Assumes x and y are well formed and have the same type.
-   *
-   * FIXME: This should probably not assume that.
-   *)
-  fun make_equality (x:term, y:term) : term =
-    let
-      val t = type_of_term x
-      val eq_t = make_function_type (t, make_function_type (t, boolean))
-    in
-      TermApplication (TermApplication (TermConstant (equal, eq_t), x), y)
-    end
 
   (*
    * |- x:a = x:a
    *)
   val equal_reflexive : theorem =
     let
-      val x = TermFreeVariable ("x", TypeVariable "a")
+      val t = TypeVariable 0
+      val x = TermVariable 0
     in
-      Theorem ([], make_equality (x, x))
+      Theorem (
+        1,   (* 1 type variable *)
+        [t], (* 1 variable of type t *)
+        [],  (* No assumptions *)
+        TermApplication (TermApplication (TermConstant (equal, [t]), x), x))
     end
 
 end
