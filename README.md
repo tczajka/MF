@@ -2,19 +2,23 @@
 
 MF is a language of formal mathematics along with a library of mathematical proofs.
 
-Proofs are written in Standard ML. Correctness is guaranteed by Standard ML's type system: "theorem" is an abstract data type,
-axioms are constant of type "theorem", and inference rules are functions that return values of type "theorem". This guarantees
-that the only theorems 
+Proofs are written as programs in  Standard ML. Correctness is guaranteed by Standard ML's type system: "theorem" is an abstract
+data type, axioms are constant of type "theorem", and inference rules are functions that return values of type "theorem". This
+guarantees that all theorems have valid derivations. 
 
-This allows a whole spectrum of proof techniques, from directly applying basic inference rules, to automated searchers.
+This also allows a whole spectrum of proof techniques, from directly applying basic inference rules, through automating simple
+steps, all the way to computer verification of thousands of cases as in the proof of the Four Color Theorem by Kenneth Appel and
+Wolfgang Haken.
 
-Goals include:
-* Simple logical core of axioms and inference rules.
-* Readable proofs in the library. All proofs must be written with human consumption in mind.
-* Theorems are "safe", no back door to confuse the reader about what has been proved.
+Goals of the project include:
+* A simple logical core of axioms and inference rules.
+* Readable proofs. All proofs must be written with human consumption in mind.
+* Theorems are "safe", there are no back doors that can confuse the reader about what has been proved.
   * There is no mechanism to sneak in additional axioms or inference rules.
-  * Parsing and printing contexts will detect an attempt to redefine a concept with a different definition and will refuse to
-    print a theorem in an ambiguous/confusing way.
+  * Theorem parser and printer will detect redefined concepts and will refuse to interpret or present the text of a theorem in
+    an ambiguous way.
+* Formalize basic branches of mathematics, such as mathematical analysis.
+* Prove some difficult theorems. Hopefully we can eventually prove Fermat's Last Theorem!
 
 This idea of using a programming language is inspired by Logic of Computable Functions by Gordon Miller.
 
