@@ -24,8 +24,9 @@ The logical core is made even simpler than that of HOL Light:
 * We use a simpler set of axioms and inference rules.
 * De Bruijn index notation for all variables and type variables makes the implementation of core logic even simpler.
 
-Binders such as "all" and "exist" are defined, and still don't need special syntax. They are just function application:
-"all x . 2 * x = x + x" is just parsed as "all (x . 2 * x = x + x)", where the term in brackets is a lambda-expression.
+Quantifiers such as "all" and "exist" are defined, and still don't need special syntax to be readable. They are just
+function application:
+`all x . 2 * x = x + x` is just parsed as `all (x . 2 * x = x + x)`, where the term in brackets is a function.
 
 Some artificial restrictions in HOL Light don't appear in MF:
 * Empty types are allowed.
