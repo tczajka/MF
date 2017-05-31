@@ -1,5 +1,4 @@
-# MF
-Formally verified mathematics
+# MF: Formally verified mathematics
 
 MF is a language of formal mathematics along with a library of mathematical proofs.
 
@@ -8,17 +7,20 @@ axioms are constant of type "theorem", and inference rules are functions that re
 that the only theorems 
 
 This allows a whole spectrum of proof techniques, from directly applying basic inference rules, to automated searchers.
-This idea is inspired by Logic of Computable Functions by Gordon Miller.
-
-The language is simply-typed lambda-calculus by Church, with rules of inference loosely inspired by HOL Light by John Harrison.
 
 Goals include:
 * Simple logical core of axioms and inference rules.
-* Readable proofs in the library. All proofs must be written with human-consumption in mind.
-* Theorems are "safe", no back door to confuse the reader about what has been proved. Therefore:
-  * There is no mechinism to sneak in additional axioms or inference rules.
-  * Parsing and printing context will detect an attempt to redefine a concept with a different definition and will refuse to
+* Readable proofs in the library. All proofs must be written with human consumption in mind.
+* Theorems are "safe", no back door to confuse the reader about what has been proved.
+  * There is no mechanism to sneak in additional axioms or inference rules.
+  * Parsing and printing contexts will detect an attempt to redefine a concept with a different definition and will refuse to
     print a theorem in an ambiguous/confusing way.
+
+This idea of using a programming language is inspired by Logic of Computable Functions by Gordon Miller.
+
+Higher order language as a foundation of mathematics is based on the simply typed lambda calculus by Alonzo Church.
+
+Rules of inference are loosely inspired by HOL Light by John Harrison.
 
 The logical core is made even simpler than that of HOL Light:
 * We use a simpler set of axioms and inference rules.
