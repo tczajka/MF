@@ -20,19 +20,20 @@ Goals of the project include:
 * Formalize basic branches of mathematics, such as mathematical analysis.
 * Prove some difficult theorems. Hopefully we can eventually prove Fermat's Last Theorem!
 
-This idea of using a programming language is inspired by Logic of Computable Functions by Gordon Miller.
+This idea of using a programming language is inspired by Logic of Computable Functions by Robin Milner.
 
 Higher order language as a foundation of mathematics is based on the simply typed lambda calculus by Alonzo Church.
 
-Rules of inference are loosely inspired by HOL Light by John Harrison.
+Rules of inference are inspired by HOL Light by John Harrison.
 
 The logical core is made even simpler than that of HOL Light:
 * We use a simpler set of axioms and inference rules.
+* Purely functional, there is no global state.
 * De Bruijn index notation for all variables and type variables makes the implementation of core logic even simpler.
 
 Quantifiers such as "all" and "exist" are defined, and still don't need special syntax to be readable. They are just
 function application:
-`all x . 2 * x = x + x` is just parsed as `all (x . 2 * x = x + x)`, where the term in brackets is a function.
+`all x . 2 * x = x + x` is just parsed as `all (x . 2 * x = x + x)`, where the term in parentheses is a function.
 
 Some artificial restrictions in HOL Light don't appear in MF:
 * Empty types are allowed.
