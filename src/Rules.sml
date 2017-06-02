@@ -14,14 +14,6 @@ structure Rules :> sig
   type type_name = string
 
   (*
-   * Theorem.
-   *
-   * This is an abstract type.  This guarantees that theorems can only be
-   * generated from axioms and inference rules.
-   *)
-  type theorem
-
-  (*
    * Type constant (potentially polymorphic).
    *
    * This is an abstract type. This guarantees that type constants can only be
@@ -79,19 +71,29 @@ structure Rules :> sig
   | TermAbstraction of hol_type * term
 
   (*
+   * Unproven claim.
+   *)
+  datatype claim = Claim of {
+    num_type_vars : int, (* the number of type variables *)
+    var_types : hol_type list, (* types of free variables *)
+    assumptions : term list,
+    conclusion : term
+  }
+
+  (*
+   * Theorem.
+   *
+   * This is an abstract type.  This guarantees that theorems can only be
+   * generated from axioms and inference rules.
+   *)
+  type theorem
+
+  val theorem_to_claim : theorem -> claim
+
+  (*
    * Primitive type: boolean ("bool").
    *)
   val boolean : hol_type
-
-  (*
-   * Primitive type constructor: function ("->").
-   *)
-  val function : type_constant
-
-  (*
-   * Primitive constant: equality ("=").
-   *)
-  val equal : constant
 
   (*
    * Axiom: p |- p
@@ -99,11 +101,48 @@ structure Rules :> sig
   val assumption : theorem
 
   (*
+   * Equality and related axioms.
+   *)
+
+  (*
+   * Primitive constant: equality ("=").
+   *)
+  val equal : constant
+
+  (*
    * Axiom: equality is reflexive.
    *
    * |- x = x
    *)
   val equal_self : theorem
+
+   (*
+    * Axiom: deduce an equivalent statement.
+    *
+    * If:
+    *   A |- p=q
+    * and
+    *   B |- p
+    * then:
+    *   A+B |- q
+    val deduce_from_equal : theorem * theorem -> theorem
+    *)
+
+   (*
+    * Rule: deduce iff from two deductions.
+    * If:
+    *   A,q |- p
+    * and:
+    *   B,p |- q
+    * then:
+    *   A+B |- p = q
+    val deduce_equal : theorem * theorem -> theorem
+    *)
+
+  (*
+   * Primitive type constructor: function ("->").
+   *)
+  val function : type_constant
 
   (*
    * Axiom: substitute equal arguments.
@@ -117,44 +156,25 @@ structure Rules :> sig
    *
    * |- (fun x body) x = body
    *
-   val apply_function : int (* type vars *) * int (* free vars, at least 1 *) * term -> theorem
+   val apply_function : { num_type_vars : int, var_types : hol_type list, body : term } -> theorem
    *)
-
-   (*
-    * Rule: Deduce equivalent statement.
-    *
-    * If:
-    *   A |- p = q
-    * and:
-    *   B |- p
-    * then:
-    *   A+B |- q
-    val deduce_from_iff : theorem * theorem -> theorem
-    *)
-
-   (*
-    * Rule: deduce iff from two deductions.
-    * If:
-    *   A,q |- p
-    * and:
-    *   B,p |- q
-    * then:
-    *   A+B |- p = q
-    val deduce_iff : theorem * theorem -> theorem
-    *)
 
    (*
     * Instantiate types and free variables.
     *
     val instantiate :
-      theorem * int (* new type variables *) * int (* new free variables *)
-      * hol_type list * term list -> theorem
+      theorem * {
+        num_type_vars : int,
+        var_types : hol_type list,
+        type_var_substitutions : hol_type list,
+        var_substitutions : term list
+      } -> theorem
     *)
 
    (*
     * Define a constant as equal to a term.
     *
-    * val define_polymorphic_constant : int (* type variables *) * term -> constant
+    * val define_constant : { num_type_vars : int, definition : term } -> constant
     *)
 
    (*
@@ -174,7 +194,7 @@ structure Rules :> sig
     * Given: |- (exist) <property>
     * Define a constant with that property.
     *
-    * val define_arbitrary_polymorphic_constant : theorem -> constant
+    * val define_arbitrary_constant : theorem -> constant
     *)
 
    (*
@@ -182,7 +202,7 @@ structure Rules :> sig
     * Where "some property" is the "(=) expression" given to define_constant,
     * or the expression given to define_arbitrary_constant.
     *
-    * val constant_definition : constant -> theorem
+    * val by_definition : constant -> theorem
     *)
 
   (*
@@ -225,17 +245,7 @@ end = struct
   type constant_name = string
   type type_name = string
 
-  (*
-   * A theorem is a list of assumptions and the conclusion.
-   * It may be polymorpic and contain some free variables.
-   *)
-  datatype theorem =
-    Theorem of int (* num type arguments *)
-             * hol_type list (* free variables *)
-             * term list (* assumptions *)
-             * term (* conclusion *)
-
-  and hol_type =
+  datatype hol_type =
     TypeVariable of int
   | TypeApplication of type_constant * hol_type list
 
@@ -246,10 +256,11 @@ end = struct
    *
    * The definition is included here so that we can compare types.
    *)
-  and type_constant =
-    TypeConstant of type_name
-                  * int (* num type arguments *)
-                  * type_definition
+  and type_constant = TypeConstant of {
+    name : type_name,
+    num_type_vars : int,
+    definition : type_definition
+  }
 
   (*
    * Definition of a type constant
@@ -264,11 +275,12 @@ end = struct
    *
    * The definition is included here so that we can compare constants.
    *)
-  and constant =
-    Constant of constant_name
-              * int (* num type arguments *)
-              * hol_type (* constant type *)
-              * constant_definition
+  and constant = Constant of {
+    name : string,
+    num_type_vars : int,
+    the_type : hol_type,
+    definition : constant_definition
+  }
 
   (*
    * Definition of a constant.
@@ -282,23 +294,49 @@ end = struct
   | TermApplication of term * term
   | TermAbstraction of hol_type * term
 
+  and claim = Claim of {
+    num_type_vars : int,
+    var_types : hol_type list,
+    assumptions : term list,
+    conclusion : term
+  }
+
+  and theorem = Theorem of claim
+
+  fun theorem_to_claim (Theorem c) = c
+
   (*
    * Primitive types.
    *)
-  val boolean : hol_type =
-    TypeApplication (TypeConstant ("bool", 0, TypeDefinitionPrimitive), [])
+  val boolean =
+    TypeApplication (
+      TypeConstant {
+        name = "bool",
+        num_type_vars = 0,
+        definition = TypeDefinitionPrimitive
+      },
+      [])
 
-  val function : type_constant =
-    TypeConstant ("->", 2, TypeDefinitionPrimitive)
+  val function = TypeConstant {
+    name = "->",
+    num_type_vars = 2,
+    definition = TypeDefinitionPrimitive
+  }
 
   (*
    * Primitive constant "=".
    *)
-  val equal : constant =
-    Constant ("=",
-              1,
-              TypeApplication (function, [TypeVariable 0, TypeVariable 0]),
-              ConstantDefinitionPrimitive)
+  val equal = Constant {
+    name = "=",
+    num_type_vars = 1,
+    the_type = TypeApplication (function, [TypeVariable 0, TypeVariable 0]),
+    definition = ConstantDefinitionPrimitive
+  }
+
+  (*
+   * Only this module has access to this!
+   *)
+  val axiom = Theorem
 
   (*
    * p:bool |- p:bool
@@ -307,11 +345,11 @@ end = struct
     let
       val p = TermVariable 0
     in
-      Theorem (
-        0,   (* no type variables *)
-        [boolean],  (* 1 variable of type boolean *)
-        [p], (* assumptions *)
-        p)  (* conclusion *)
+      axiom (Claim {
+        num_type_vars = 0,
+        var_types = [boolean],
+        assumptions = [p],
+        conclusion = p})
     end
 
   (*
@@ -334,11 +372,11 @@ end = struct
       val a = TypeVariable 0
       val x = TermVariable 0
     in
-      Theorem (
-        1,   (* 1 type variable *)
-        [a], (* 1 variable of type a *)
-        [],  (* No assumptions *)
-        make_equality (a, x, x))
+      axiom (Claim {
+        num_type_vars = 1,
+        var_types = [a],
+        assumptions = [],
+        conclusion = make_equality (a, x, x)})
     end
 
   (*
@@ -353,11 +391,12 @@ end = struct
       val y = TermVariable 1
       val f = TermVariable 2
     in
-      Theorem (
-        2,  (* 2 type variables *)
-        [a, a, make_function_type (a, b)],  (* three variables x, y, f *)
-        [make_equality (a, x, y)],
-        make_equality (b, TermApplication (f, x), TermApplication (f, y)))
+      axiom (Claim {
+        num_type_vars = 2,
+        var_types = [a, a, make_function_type (a, b)],
+        assumptions = [make_equality (a, x, y)],
+        conclusion = make_equality (b, TermApplication (f, x), TermApplication (f, y))
+      })
     end
 
 end
