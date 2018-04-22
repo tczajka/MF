@@ -50,6 +50,7 @@ struct
   datatype constant =
     False
   | Implies
+  | All
   | In
   | TheOnly
   | Defined of string * mf_type * term
@@ -65,6 +66,7 @@ struct
     case c of
       False => Bool
     | Implies => Operation (Bool, Operation (Bool, Bool))
+    | All => Operation (Operation (Set, Bool), Bool)
     | In => Operation (Set, Operation (Set, Bool))
     | TheOnly => Operation (Operation (Set, Bool),  Set)
     | Defined (_, t, _) => t
