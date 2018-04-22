@@ -2,16 +2,9 @@
 
 MF is a language of formal mathematics along with a library of mathematical proofs.
 
-Proofs are written as programs in  Standard ML. Correctness is guaranteed by Standard ML's type system: "theorem" is an abstract
-data type, axioms are constant of type "theorem", and inference rules are functions that return values of type "theorem". This
-guarantees that all theorems have valid derivations. 
-
-This also allows a whole spectrum of proof techniques, from directly applying basic inference rules, through automating simple
-steps, all the way to computer verification of thousands of cases as in the proof of the Four Color Theorem by Kenneth Appel and
-Wolfgang Haken.
-
 Goals of the project include:
-* A simple logical core of axioms and inference rules.
+* Simple logical core of axioms and inference rules.
+* Logical system equivalent to ZFC (Zermelo-Fraenkel set theory with the axiom of choice).
 * Readable proofs. All proofs must be written with human consumption in mind.
 * Theorems are "safe", there are no back doors that can confuse the reader about what has been proved.
   * There is no mechanism to sneak in additional axioms or inference rules.
@@ -20,22 +13,16 @@ Goals of the project include:
 * Formalize basic branches of mathematics, such as mathematical analysis.
 * Prove some difficult theorems. Hopefully we can eventually prove Fermat's Last Theorem!
 
+Proofs are written as programs in Standard ML. Correctness is guaranteed by Standard ML's type system: "theorem" is an abstract
+data type, axioms are constant of type "theorem", and inference rules are functions that return values of type "theorem". This
+guarantees that all theorems have valid derivations. 
+
+This also allows a whole spectrum of proof techniques, from directly applying basic inference rules, through automating simple
+steps, all the way to computer verification of thousands of cases as in the proof of the Four Color Theorem by Kenneth Appel and
+Wolfgang Haken.
+
 This idea of using a programming language is inspired by Logic of Computable Functions by Robin Milner.
 
-Higher order language as a foundation of mathematics is based on the simply typed lambda calculus by Alonzo Church.
-
-Rules of inference are inspired by HOL Light by John Harrison.
-
-The logical core is made even simpler than that of HOL Light:
-* We use a simpler set of axioms and inference rules.
-* Purely functional, there is no global state.
-* De Bruijn index notation for all variables and type variables makes the implementation of core logic even simpler.
-
-Quantifiers such as "all" and "exist" are defined, and still don't need special syntax to be readable. They are just
-function application:
-`all x . 2 * x = x + x` is just parsed as `all (x . 2 * x = x + x)`, where the term in parentheses is a function.
-
-Some artificial restrictions in HOL Light don't appear in MF:
-* Empty types are allowed.
-* Polymorphic constants are allowed with no restrictions.
-  For instance, one can define a constant "is_infinite[type] : bool" that is different for different types.
+The main difference from other projects such as Isabelle and HOL Light is that we use first-order logic,
+which makes our system exactly equivalent to ZFC. Higher-order systems, including Isabelle/ZF, make stronger
+assumptions. This makes MF compatible with standard mathematical practice.
