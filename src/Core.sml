@@ -26,7 +26,7 @@ sig
   val type_of_constant : constant -> mf_type
 
   (*
-   * Given bound variable types and a term, return the type.
+   * Given a term and bound variable types, return the type.
    *)
   val type_of_term : term * mf_type list -> mf_type
 
