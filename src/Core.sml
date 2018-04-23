@@ -124,7 +124,7 @@ sig
    * Unique existential quantifier.
    *
    * Defined as:
-   * exist1 p = exist x . all y (p x <=> y = x)
+   * exist1 p = exist x . all y (p y <=> y = x)
    *)
   val exist1 : constant
 
@@ -317,7 +317,7 @@ struct
 
 
   (*
-   * Defined: exist1 p = exist x . all y (p x <=> y = x)
+   * Defined: exist1 p = exist x . all y . (p y <=> y = x)
    *)
   val exist1 =
     define("exist1",
@@ -327,7 +327,7 @@ struct
             apply(all,
               Lambda(("y", Set),
                 apply2(iff,
-                  Application(BoundVariable 2, BoundVariable 1),
+                  Application(BoundVariable 2, BoundVariable 0),
                   apply2(equal, BoundVariable 0, BoundVariable 1))))))))
 
   val c_in = In
