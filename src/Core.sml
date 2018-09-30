@@ -237,7 +237,7 @@ sig
    *
    * For a given set a, there is a set containing all elements of elements of a.
    *
-   * a:set |- exist u . all b . all x . x in b and b in a => x in u
+   * exist u . all b . all x . x in b and b in a => x in u
    *)
   val axiom_union : theorem
 
@@ -246,17 +246,17 @@ sig
    *
    * For a given set a, there is a set containing all subsets of a.
    *
-   * a:set |- exist p . all b . subset b a => b in p
+   * exist p . all b . subset b a => b in p
    *)
   val axiom_power_set : theorem
 
   (*
    * Axiom of replacement.
    *
-   * Given a set a and an operation f, there is a set containing all f(x),
+   * Given a set a and an operation f, there is a set containing all f(x) for
    * x in a.
    *
-   * a:set, f:set->set |- exist b. all x . x in a => f x in b
+   * exist b. all x . x in a => f x in b
    *)
   val axiom_replacement : theorem
 
@@ -275,9 +275,9 @@ sig
    * There exists a nonempty set I, such that for every element there is another
    * larger element.
    *
-   * |- exist I .
-   *      I /= empty and
-   *      all x . x in I => exist y . y in I and y /= x and subset x y
+   * exist I .
+   *   I /= empty and
+   *   all x . x in I => exist y . y in I and y /= x and subset x y
    *)
   val axiom_infinity : theorem
 
@@ -287,7 +287,6 @@ sig
    * Given a set of disjoint sets, there exists a set that has exactly one
    * element in common with each of them.
    *
-   * A:set,
    * all a . all b. a in A and b in A and a /= b => disjoint a b
    * |- exist C . all a . a in A => exist1 x . x in C and x in a
    *)
@@ -480,7 +479,7 @@ struct
     define("/=",
       Lambda("a", set_type,
         Lambda("b", set_type,
-          apply_not(apply_equal(BoundVariable 0, BoundVariable 1))
+          apply_not(apply_equal(BoundVariable 1, BoundVariable 0))
         )
       )
     )
@@ -662,7 +661,7 @@ struct
   (*
    * Axiom of union.
    *
-   * a:set |- exist u . all b . all x . x in b and b in a => x in u
+   * exist u . all b . all x . x in b and b in a => x in u
    *)
   val axiom_union =
     let
@@ -690,7 +689,7 @@ struct
   (*
    * Axiom of power set.
    *
-   * a:set |- exist p . all b . subset b a => b in p
+   * exist p . all b . subset b a => b in p
    *)
   val axiom_power_set =
     let
@@ -716,7 +715,7 @@ struct
    * Given a set a and an operation f, there is a set containing all f(x),
    * x in a.
    *
-   * a:set, f:set->set |- exist b. all x . x in a => f x in b
+   * exist b. all x . x in a => f x in b
    *)
   val axiom_replacement =
     let
