@@ -292,9 +292,10 @@ sig
   (*
    * Axiom of choice.
    *
-   * Given a set of disjoint sets, there exists a set that has exactly one
-   * element in common with each of them.
+   * Given a set of disjoint nonempty sets, there exists a set that has exactly
+   * one element in common with each of them.
    *
+   * all a . a in A => a /= empty
    * all a . all b. a in A and b in A and a /= b => disjoint a b
    * |- exist C . all a . a in A => exist1 x . x in C and x in a
    *)
@@ -799,6 +800,7 @@ struct
   (*
    * Axiom of choice.
    *
+   * all a . a in A => a /= empty
    * all a . all b. a in A and b in A and a /= b => disjoint a b
    * |- exist C . all a . a in A => exist1 x . x in C and x in a
    *)
@@ -809,6 +811,12 @@ struct
       axiom(
         [("A", set_type)],
         [
+          apply_all("a",
+            apply_implies(
+              apply_in(BoundVariable 0, A),
+              apply_not_equal(BoundVariable 0, Constant empty)
+            )
+          ),
           apply_all("a", apply_all("b",
             apply_implies(
               apply_and_3(
