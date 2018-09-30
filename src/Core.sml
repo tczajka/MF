@@ -391,6 +391,9 @@ struct
   fun apply2 (f : term, a : term, b : term) =
     Application(Application(f, a), b)
 
+  fun implication(a : term, b : term) =
+    apply2(implies, a, b)
+
   (*
    * Define: not p = (p => false).
    *)
@@ -399,6 +402,9 @@ struct
       Lambda("p", bool_t,
         apply2(implies, BoundVariable 0, false_c)))
 
+  fun negate(a : term) =
+    Application(not_c, a)
+
   (*
    * Define: p or q = (not p => q).
    *)
@@ -406,9 +412,16 @@ struct
     define("or",
       Lambda("p", bool_t,
         Lambda("q", bool_t,
-          apply2(implies,
-                 Application(not_c, BoundVariable 1),
-                 BoundVariable 0))))
+          implication(
+            negate(BoundVariable 1),
+            BoundVariable 0
+          )
+        )
+      )
+    )
+
+  fun or2(a : term, b : term) =
+    apply2(or_c, a, b)
 
   (*
    * Define: p and q = not (not p or not q).
@@ -417,10 +430,16 @@ struct
     define("and",
       Lambda("p", bool_t,
         Lambda("q", bool_t,
-          Application(not_c,
-            apply2(or_c,
-              Application(not_c, BoundVariable 1),
-              Application(not_c, BoundVariable 0))))))
+          negate(or2(negate(BoundVariable 1), negate(BoundVariable 0)))
+        )
+      )
+    )
+
+  fun and2(a : term, b : term) =
+    apply2(and_c, a, b)
+
+  fun and3(a : term, b : term, c : term) =
+    and2(and2(a, b), c)
 
   (*
    * Define: p <=> q = (p => q) and (q => p).
@@ -429,11 +448,21 @@ struct
     define("<=>",
       Lambda("p", bool_t,
         Lambda("q", bool_t,
-          apply2(and_c,
-            apply2(implies, BoundVariable 1, BoundVariable 0),
-            apply2(implies, BoundVariable 0, BoundVariable 1)))))
+          and2(
+            implication(BoundVariable 1, BoundVariable 0),
+            implication(BoundVariable 0, BoundVariable 1)
+          )
+        )
+      )
+    )
+
+  fun iff2(a : term, b : term) =
+    apply2(iff, a, b)
 
   val equal = Constant Equal
+
+  fun equality(a : term, b : term) =
+    apply2(equal, a, b)
 
   (*
    * Define a /= b  =  not (a=b).
@@ -442,14 +471,18 @@ struct
     define("/=",
       Lambda("a", set,
         Lambda("b", set,
-          Application(not_c,
-            apply2(equal, BoundVariable 0, BoundVariable 1)
-          )
+          negate(equality(BoundVariable 0, BoundVariable 1))
         )
       )
     )
 
+  fun not_equality(a : term, b : term) =
+    apply2(not_equal, a, b)
+
   val all = Constant All
+
+  fun for_all(name : string, p : term) =
+    Application(all, Lambda(name, set, p))
 
   (*
    * Define: exist p = not (all x . not (p x)).
@@ -457,11 +490,14 @@ struct
   val exist =
     define("exist",
       Lambda("p", Operation(set, bool_t),
-        Application(not_c,
-          Application(all,
-            Lambda("x", set,
-              Application(not_c,
-                Application(BoundVariable 1, BoundVariable 0)))))))
+        negate(for_all("x", negate(
+          Application(BoundVariable 1, BoundVariable 0)
+        )))
+      )
+    )
+
+  fun exists(name : string, p : term) =
+    Application(exist, Lambda(name, set, p))
 
   (*
    * Defined: exist1 p = exist x . all y . (p y <=> y = x)
@@ -469,17 +505,29 @@ struct
   val exist1 =
     define("exist1",
       Lambda("p", Operation(set, bool_t),
-        Application(exist,
-          Lambda("x", set,
-            Application(all,
-              Lambda("y", set,
-                apply2(iff,
-                  Application(BoundVariable 2, BoundVariable 0),
-                  apply2(equal, BoundVariable 0, BoundVariable 1))))))))
+        exists("x",
+          for_all("y",
+            iff2(
+              Application(BoundVariable 2, BoundVariable 0),
+              equality(BoundVariable 0, BoundVariable 1)
+            )
+          )
+        )
+      )
+    )
+
+  fun exists1(name : string, p : term) =
+    Application(exist1, Lambda(name, set, p))
 
   val in_c = Constant In
 
+  fun in2(a : term, b : term) =
+    apply2(in_c, a, b)
+
   val the_only = Constant TheOnly
+
+  fun the(name : string, p : term) =
+    Application(the_only, Lambda(name, set, p))
 
   (*
    * Declare an axiom.
@@ -506,9 +554,7 @@ struct
    * the_only_invalid implies it's the empty set.
    *)
   val empty =
-    define("empty",
-      Application(the_only,
-        Lambda ("a", set, false_c)))
+    define("empty", the("a", false_c))
 
   (*
    * Subset predicate.
@@ -519,12 +565,12 @@ struct
     define("subset",
       Lambda("a", set,
         Lambda("b", set,
-          Application(all, Lambda("x", set,
-            apply2(implies,
-              apply2(in_c, BoundVariable 0, BoundVariable 2),
-              apply2(in_c, BoundVariable 0, BoundVariable 1)
+          for_all("x",
+            implication(
+              in2(BoundVariable 0, BoundVariable 2),
+              in2(BoundVariable 0, BoundVariable 1)
             )
-          ))
+          )
         )
       )
     )
@@ -538,14 +584,14 @@ struct
     define("disjoint",
       Lambda("a", set,
         Lambda("b", set,
-          Application(all, Lambda("x", set,
-            Application(not_c,
-              apply2(and_c,
-                apply2(in_c, BoundVariable 0, BoundVariable 2),
-                apply2(in_c, BoundVariable 0, BoundVariable 1)
+          for_all("x",
+            negate(
+              and2(
+                in2(BoundVariable 0, BoundVariable 2),
+                in2(BoundVariable 0, BoundVariable 1)
               )
             )
-          ))
+          )
         )
       )
     )
@@ -578,10 +624,9 @@ struct
       axiom(
         [("p", Operation(set, bool_t)),
          ("x", set)],
-        [Application(not_c, Application(exist1, p))],
-        Application(
-          not_c,
-          apply2(in_c, x, Application(the_only, p))))
+        [negate(Application(exist1, p))],
+        negate(in2(x, Application(the_only, p)))
+      )
     end
 
   (*
@@ -596,13 +641,14 @@ struct
     in
       axiom(
         [("a", set), ("b", set)],
-        [Application(
-           all,
-           Lambda("x", set,
-             apply2(iff,
-               apply2(in_c, BoundVariable 0, a),
-               apply2(in_c, BoundVariable 0, b))))],
-        apply2(equal, a, b))
+        [for_all("x",
+           iff2(
+             in2(BoundVariable 0, a),
+             in2(BoundVariable 0, b)
+           )
+         )],
+        equality(a, b)
+      )
     end
 
   (*
@@ -617,18 +663,19 @@ struct
       axiom(
         [("a", set)],
         [],
-        Application(exist, Lambda("u", set,
-          Application(all, Lambda("b", set,
-            Application(all, Lambda("x", set,
-              apply2(implies,
-                apply2(and_c,
-                  apply2(in_c, BoundVariable 0, BoundVariable 1),
-                  apply2(in_c, BoundVariable 1, a)),
-                apply2(in_c, BoundVariable 0, BoundVariable 2)
+        exists("u",
+          for_all("b",
+            for_all("x",
+              implication(
+                and2(
+                  in2(BoundVariable 0, BoundVariable 1),
+                  in2(BoundVariable 1, a)
+                ),
+                in2(BoundVariable 0, BoundVariable 2)
               )
-            ))
-          ))
-        ))
+            )
+          )
+        )
       )
     end
 
@@ -644,14 +691,14 @@ struct
       axiom(
         [("a", set)],
         [],
-        Application(exist, Lambda("p", set,
-          Application(all, Lambda("b", set,
-            apply2(implies,
+        exists("p",
+          for_all("b",
+            implication(
               apply2(subset, BoundVariable 0, a),
-              apply2(in_c, BoundVariable 0, BoundVariable 1)
+              in2(BoundVariable 0, BoundVariable 1)
             )
-          ))
-        ))
+          )
+        )
       )
     end
 
@@ -671,13 +718,11 @@ struct
       axiom(
         [("a", set), ("f", Operation(set, set))],
         [],
-        Application(exist, Lambda("b", set,
-          Application(all, Lambda("x", set,
-            apply2(implies,
-              apply2(in_c, BoundVariable 0, a),
-              apply2(in_c, Application(f, BoundVariable 0), BoundVariable 1)
-            )
-          ))
+        exists("b", for_all("x",
+          implication(
+            in2(BoundVariable 0, a),
+            in2(Application(f, BoundVariable 0), BoundVariable 1)
+          )
         ))
       )
     end
@@ -693,13 +738,13 @@ struct
     in
       axiom(
         [("a", set)],
-        [apply2(not_equal, a, empty)],
-        Application(exist, Lambda ("x", set,
-          apply2(and_c,
-            apply2(in_c, BoundVariable 0, a),
+        [not_equality(a, empty)],
+        exists("x",
+          and2(
+            in2(BoundVariable 0, a),
             apply2(disjoint, BoundVariable 0, a)
           )
-        ))
+        )
       )
     end
 
@@ -717,25 +762,23 @@ struct
     axiom(
       [],
       [],
-      Application(exist, Lambda("I", set,
-        apply2(and_c,
-          apply2(not_equal, BoundVariable 0, empty),
-          Application(all, Lambda("x", set,
-            apply2(implies,
-              apply2(in_c, BoundVariable 0, BoundVariable 1),
-              Application(exist, Lambda("y", set,
-                apply2(and_c,
-                  apply2(and_c,
-                    apply2(in_c, BoundVariable 0, BoundVariable 2),
-                    apply2(not_equal, BoundVariable 0, BoundVariable 1)
-                  ),
+      exists("I",
+        and2(
+          not_equality(BoundVariable 0, empty),
+          for_all("x",
+            implication(
+              in2(BoundVariable 0, BoundVariable 1),
+              exists("y",
+                and3(
+                  in2(BoundVariable 0, BoundVariable 2),
+                  not_equality(BoundVariable 0, BoundVariable 1),
                   apply2(subset, BoundVariable 1, BoundVariable 0)
                 )
-              ))
+              )
             )
-          ))
+          )
         )
-      ))
+      )
     )
 
   (*
@@ -752,33 +795,27 @@ struct
       axiom(
         [("A", set)],
         [
-          Application(all, Lambda("a", set,
-            Application(all, Lambda("b", set,
-              apply2(implies,
-                apply2(and_c,
-                  apply2(and_c,
-                    apply2(in_c, BoundVariable 1, A),
-                    apply2(in_c, BoundVariable 0, A)
-                  ),
-                  apply2(not_equal, BoundVariable 1, BoundVariable 0)
-                ),
-                apply2(disjoint, BoundVariable 1, BoundVariable 0)
-              )
-            ))
-          ))
-        ],
-        Application(exist, Lambda("C", set,
-          Application(all, Lambda("a", set,
-            apply2(implies,
-              apply2(in_c, BoundVariable 0, A),
-              Application(exist1, Lambda("x", set,
-                apply2(and_c,
-                  apply2(in_c, BoundVariable 0, BoundVariable 2),
-                  apply2(in_c, BoundVariable 0, BoundVariable 1)
-                )
-              ))
+          for_all("a", for_all("b",
+            implication(
+              and3(
+                in2(BoundVariable 1, A),
+                in2(BoundVariable 0, A),
+                not_equality(BoundVariable 1, BoundVariable 0)
+              ),
+              apply2(disjoint, BoundVariable 1, BoundVariable 0)
             )
           ))
+        ],
+        exists("C", for_all("a",
+          implication(
+            in2(BoundVariable 0, A),
+            exists1("x",
+              and2(
+                in2(BoundVariable 0, BoundVariable 2),
+                in2(BoundVariable 0, BoundVariable 1)
+              )
+            )
+          )
         ))
       )
     end
