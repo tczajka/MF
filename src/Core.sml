@@ -243,7 +243,8 @@ sig
   (*
    * Axiom of union.
    *
-   * For a given set a, there is a set containing all elements of elements of a.
+   * For a given set a, there is a set containing all elements of elements of a
+   * (and maybe more).
    *
    * exist u . all b . all x . x in b and b in a => x in u
    *)
@@ -252,7 +253,8 @@ sig
   (*
    * Axiom of power set.
    *
-   * For a given set a, there is a set containing all subsets of a.
+   * For a given set a, there is a set containing all subsets of a (and maybe
+   * more).
    *
    * exist p . all b . subset b a => b in p
    *)
@@ -261,10 +263,10 @@ sig
   (*
    * Axiom of replacement.
    *
-   * Given a set a and an operation f, there is a set containing all f(x) for
-   * x in a.
+   * Given a set a and an operation f, there is a set containing exactly
+   * all f(x) for x in a.
    *
-   * exist b. all x . x in a => f x in b
+   * exist b. all y . y in b <=> exist x . x in a and y = f x
    *)
   val axiom_replacement : theorem
 
@@ -721,10 +723,10 @@ struct
   (*
    * Axiom of replacement.
    *
-   * Given a set a and an operation f, there is a set containing all f(x),
-   * x in a.
+   * Given a set a and an operation f, there is a set containing exactly
+   * all f(x) for x in a.
    *
-   * exist b. all x . x in a => f x in b
+   * exist b. all y . y in b <=> exist x . x in a and y = f x
    *)
   val axiom_replacement =
     let
@@ -734,10 +736,15 @@ struct
       axiom(
         [("a", set_type), ("f", Operation(set_type, set_type))],
         [],
-        apply_exist("b", apply_all("x",
-          apply_implies(
-            apply_in(BoundVariable 0, a),
-            apply_in(Application(f, BoundVariable 0), BoundVariable 1)
+        apply_exist("b", apply_all("y",
+          apply_iff(
+            apply_in(BoundVariable 0, BoundVariable 1),
+            apply_exist("x",
+              apply_and(
+                apply_in(BoundVariable 0, a),
+                apply_equal(BoundVariable 1, Application(f, BoundVariable 0))
+              )
+            )
           )
         ))
       )
