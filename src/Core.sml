@@ -118,6 +118,13 @@ sig
   val equal : term
 
   (*
+   * /= : set -> set -> bool
+   *
+   * Not equal operator.
+   *)
+  val not_equal : term
+
+  (*
    * all : (set -> bool) -> bool
    *
    * Built-in universal quantifier.
@@ -169,9 +176,33 @@ sig
   val the_only : term
 
   (*
+   * The empty set.
+   *
+   * Defined in a hacky way:
+   * empty = the_only a . false
+   *
+   * the_only_invalid implies it's the empty set.
+   *)
+  val empty : term
+
+  (*
+   * Subset predicate.
+   *
+   * subset a b = all x . x in a => x in b
+   *)
+  val subset : term
+
+  (*
+   * Disjoint predicate.
+   *
+   * disjoint a b = all x . not (x in a and x in b)
+   *)
+  val disjoint : term
+
+  (*
    * Axiom for intensional definitions:
    *
-   * exists1 p |- p (the_only p)
+   * exist1 p |- p (the_only p)
    *)
   val the_only_intro : theorem
 
@@ -180,12 +211,82 @@ sig
    *
    * If a definition is invalid, the_only p is the empty set:
    *
-   * not (exists1 p) |- not (x in the_only p)
+   * not (exist1 p) |- not (x in the_only p)
    *
    * As mentioned above, this is to ensure the_only has
    * a unique interpretation in a given ZFC model.
    *)
   val the_only_invalid : theorem
+
+  (*
+   * Axiom of extensionality.
+   *
+   * If two sets contain same elements, they are the same set.
+   *
+   * all x : x in a <=> x in b |- a = b
+   *)
+  val axiom_extensionality : theorem
+
+  (*
+   * Axiom of union.
+   *
+   * For a given set a, there is a set containing all elements of elements of a.
+   *
+   * a:set |- exist u . all b . all x . x in b and b in a => x in u
+   *)
+  val axiom_union : theorem
+
+  (*
+   * Axiom of power set.
+   *
+   * For a given set a, there is a set containing all subsets of a.
+   *
+   * a:set |- exist p . all b . subset b a => b in p
+   *)
+  val axiom_power_set : theorem
+
+  (*
+   * Axiom of replacement.
+   *
+   * Given a set a and an operation f, there is a set containing all f(x),
+   * x in a.
+   *
+   * a:set, f:set->set |- exist b. all x . x in a => f x in b
+   *)
+  val axiom_replacement : theorem
+
+  (*
+   * Axiom of regularity.
+   *
+   * Every nonempty set a has a member disjoint from a.
+   *
+   * a /= empty |- exist x : x in a and disjoint x a 
+   *)
+  val axiom_regularity : theorem
+
+  (*
+   * Axiom of infinity.
+   *
+   * There exists a nonempty set I, such that for every element there is another
+   * larger element.
+   *
+   * |- exists I .
+   *      I /= empty and
+   *      all x . x in I => exists y . y in I and y /= x and subset x y
+   *)
+  val axiom_infinity : theorem
+
+  (*
+   * Axiom of choice.
+   *
+   * Given a set of disjoint sets, there exists a set that has exactly one
+   * element in common with each of them.
+   *
+   * A:set,
+   * all a . all b. a in A and b in A and a /= b => disjoint a b
+   * |- exist C . all a . a in A => exist1 x . x in C and x in a
+   *)
+  val axiom_choice : theorem
 
 end =
 
@@ -334,6 +435,20 @@ struct
 
   val equal = Constant Equal
 
+  (*
+   * Define a /= b  =  not (a=b).
+   *)
+  val not_equal =
+    define("/=",
+      Lambda("a", set,
+        Lambda("b", set,
+          Application(not_c,
+            apply2(equal, BoundVariable 0, BoundVariable 1)
+          )
+        )
+      )
+    )
+
   val all = Constant All
 
   (*
@@ -383,19 +498,71 @@ struct
       raise Fail "Axiom assumptions and conclusion must be bool."
 
   (*
+   * The empty set.
+   *
+   * Defined in a hacky way:
+   * empty = the_only a . false
+   *
+   * the_only_invalid implies it's the empty set.
+   *)
+  val empty =
+    define("empty",
+      Application(the_only,
+        Lambda ("a", set, false_c)))
+
+  (*
+   * Subset predicate.
+   *
+   * a subset b = all x . x in a => x in b
+   *)
+  val subset =
+    define("subset",
+      Lambda("a", set,
+        Lambda("b", set,
+          Application(all, Lambda("x", set,
+            apply2(implies,
+              apply2(in_c, BoundVariable 0, BoundVariable 2),
+              apply2(in_c, BoundVariable 0, BoundVariable 1)
+            )
+          ))
+        )
+      )
+    )
+        
+  (*
+   * Disjoint predicate.
+   *
+   * disjoint a b = all x . not (x in a and x in b)
+   *)
+  val disjoint =
+    define("disjoint",
+      Lambda("a", set,
+        Lambda("b", set,
+          Application(all, Lambda("x", set,
+            Application(not_c,
+              apply2(and_c,
+                apply2(in_c, BoundVariable 0, BoundVariable 2),
+                apply2(in_c, BoundVariable 0, BoundVariable 1)
+              )
+            )
+          ))
+        )
+      )
+    )
+
+  (*
    * Axiom for intensional definitions:
    *
    * exists1 p |- p (the_only p)
    *)
   val the_only_intro =
     let
-      val p = ("p", Operation(set, bool_t))
-      val fp = FreeVariable "p"
+      val p = FreeVariable "p"
     in
       axiom(
-        [p],
-        [Application(exist1, fp)],
-        Application(fp, Application(the_only, fp)))
+        [("p", Operation(set, bool_t))],
+        [Application(exist1, p)],
+        Application(p, Application(the_only, p)))
     end
 
   (*
@@ -405,17 +572,215 @@ struct
    *)
   val the_only_invalid =
     let
-      val p = ("p", Operation(set, bool_t))
-      val fp = FreeVariable "p"
-      val x = ("x", set)
-      val fx = FreeVariable "x"
+      val p = FreeVariable "p"
+      val x = FreeVariable "x"
     in
+      axiom(
+        [("p", Operation(set, bool_t)),
+         ("x", set)],
+        [Application(not_c, Application(exist1, p))],
+        Application(
+          not_c,
+          apply2(in_c, x, Application(the_only, p))))
+    end
+
+  (*
+   * Axiom of extensionality.
+   *
+   * all x : x in a <=> x in b |- a = b
+   *)
+  val axiom_extensionality =
+    let
+      val a = FreeVariable "a"
+      val b = FreeVariable "b"
+    in
+      axiom(
+        [("a", set), ("b", set)],
+        [Application(
+           all,
+           Lambda("x", set,
+             apply2(iff,
+               apply2(in_c, BoundVariable 0, a),
+               apply2(in_c, BoundVariable 0, b))))],
+        apply2(equal, a, b))
+    end
+
+  (*
+   * Axiom of union.
+   *
+   * a:set |- exist u . all b . all x . x in b and b in a => x in u
+   *)
+  val axiom_union =
+    let
+      val a = FreeVariable "a"
+    in
+      axiom(
+        [("a", set)],
+        [],
+        Application(exist, Lambda("u", set,
+          Application(all, Lambda("b", set,
+            Application(all, Lambda("x", set,
+              apply2(implies,
+                apply2(and_c,
+                  apply2(in_c, BoundVariable 0, BoundVariable 1),
+                  apply2(in_c, BoundVariable 1, a)),
+                apply2(in_c, BoundVariable 0, BoundVariable 2)
+              )
+            ))
+          ))
+        ))
+      )
+    end
+
+  (*
+   * Axiom of power set.
+   *
+   * a:set |- exist p . all b . subset b a => b in p
+   *)
+  val axiom_power_set =
+    let
+      val a = FreeVariable "a"
+    in
+      axiom(
+        [("a", set)],
+        [],
+        Application(exist, Lambda("p", set,
+          Application(all, Lambda("b", set,
+            apply2(implies,
+              apply2(subset, BoundVariable 0, a),
+              apply2(in_c, BoundVariable 0, BoundVariable 1)
+            )
+          ))
+        ))
+      )
+    end
+
+  (*
+   * Axiom of replacement.
+   *
+   * Given a set a and an operation f, there is a set containing all f(x),
+   * x in a.
+   *
+   * a:set, f:set->set |- exist b. all x . x in a => f x in b
+   *)
+  val axiom_replacement =
+    let
+      val a = FreeVariable "a"
+      val f = FreeVariable "f"
+    in
+      axiom(
+        [("a", set), ("f", Operation(set, set))],
+        [],
+        Application(exist, Lambda("b", set,
+          Application(all, Lambda("x", set,
+            apply2(implies,
+              apply2(in_c, BoundVariable 0, a),
+              apply2(in_c, Application(f, BoundVariable 0), BoundVariable 1)
+            )
+          ))
+        ))
+      )
+    end
+
+  (*
+   * Axiom of regularity.
+   *
+   * a /= empty |- exist x : x in a and disjoint x a 
+   *)
+  val axiom_regularity =
+    let
+      val a = FreeVariable "a"
+    in
+      axiom(
+        [("a", set)],
+        [apply2(not_equal, a, empty)],
+        Application(exist, Lambda ("x", set,
+          apply2(and_c,
+            apply2(in_c, BoundVariable 0, a),
+            apply2(disjoint, BoundVariable 0, a)
+          )
+        ))
+      )
+    end
+
+  (*
+   * Axiom of infinity.
+   *
+   * There exists a nonempty set I, such that for every element there is another
+   * larger element.
+   *
+   * |- exist I .
+   *      I /= empty and
+   *      all x . x in I => exist y . y in I and y /= x and subset x y
+   *)
+  val axiom_infinity =
     axiom(
-      [p, x],
-      [Application(not_c, Application(exist1, fp))],
-      Application(
-        not_c,
-        apply2(in_c, fx, Application(the_only, fp))))
+      [],
+      [],
+      Application(exist, Lambda("I", set,
+        apply2(and_c,
+          apply2(not_equal, BoundVariable 0, empty),
+          Application(all, Lambda("x", set,
+            apply2(implies,
+              apply2(in_c, BoundVariable 0, BoundVariable 1),
+              Application(exist, Lambda("y", set,
+                apply2(and_c,
+                  apply2(and_c,
+                    apply2(in_c, BoundVariable 0, BoundVariable 2),
+                    apply2(not_equal, BoundVariable 0, BoundVariable 1)
+                  ),
+                  apply2(subset, BoundVariable 1, BoundVariable 0)
+                )
+              ))
+            )
+          ))
+        )
+      ))
+    )
+
+  (*
+   * Axiom of choice.
+   *
+   * A:set,
+   * all a . all b. a in A and b in A and a /= b => disjoint a b
+   * |- exist C . all a . a in A => exist1 x . x in C and x in a
+   *)
+  val axiom_choice =
+    let
+      val A = FreeVariable "A"
+    in
+      axiom(
+        [("A", set)],
+        [
+          Application(all, Lambda("a", set,
+            Application(all, Lambda("b", set,
+              apply2(implies,
+                apply2(and_c,
+                  apply2(and_c,
+                    apply2(in_c, BoundVariable 1, A),
+                    apply2(in_c, BoundVariable 0, A)
+                  ),
+                  apply2(not_equal, BoundVariable 1, BoundVariable 0)
+                ),
+                apply2(disjoint, BoundVariable 1, BoundVariable 0)
+              )
+            ))
+          ))
+        ],
+        Application(exist, Lambda("C", set,
+          Application(all, Lambda("a", set,
+            apply2(implies,
+              apply2(in_c, BoundVariable 0, A),
+              Application(exist1, Lambda("x", set,
+                apply2(and_c,
+                  apply2(in_c, BoundVariable 0, BoundVariable 2),
+                  apply2(in_c, BoundVariable 0, BoundVariable 1)
+                )
+              ))
+            )
+          ))
+        ))
+      )
     end
 
 end
