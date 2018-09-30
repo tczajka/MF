@@ -24,14 +24,14 @@ sig
   (*
    * Term types, e.g. bool, set, set -> bool.
    *)
-  datatype mf_type =
+  datatype type' =
     BaseType of base_type
-  | Operation of mf_type * mf_type
+  | Operation of type' * type'
 
   (*
    * A constant.
    *
-   * This is abstract so that mal-typed constants cannot be created.
+   * This is abstract so that malformed constants cannot be created.
    *)
   type constant
 
@@ -43,7 +43,7 @@ sig
   | BoundVariable of int
   | FreeVariable of string
   | Application of term * term
-  | Lambda of string * mf_type * term
+  | Lambda of string * type' * term
 
   (*
    * A proved theorem.
@@ -53,7 +53,7 @@ sig
   (*
    * The boolean type.
    *)
-  val bool_t : base_type
+  val bool' : base_type
 
   (*
    * The set type.
@@ -80,7 +80,7 @@ sig
    *
    * Built-in.
    *)
-  val false_c : constant
+  val false' : constant
 
   (*
    * => : bool -> bool -> bool
@@ -94,21 +94,21 @@ sig
    *
    * Defined as: not p = p => false.
    *)
-  val not_c : constant
+  val not' : constant
 
   (*
    * or : bool -> bool -> bool
    *
    * Defined as: p or q = not p => q
    *)
-  val or_c : constant
+  val or' : constant
 
   (*
    * and : bool -> bool -> bool
    *
    * Defined as: p and q = not (not p or not q)
    *)
-  val and_c : constant
+  val and' : constant
 
   (*
    * <=> : bool -> bool -> bool
@@ -162,7 +162,7 @@ sig
    *
    * Built-in set membership operator.
    *)
-  val in_c : constant
+  val in' : constant
 
   (*
    * the_only : (set -> bool) -> set
@@ -183,10 +183,14 @@ sig
   (*
    * The empty set.
    *
-   * Defined in a hacky way:
+   * Defined in a hacky way: the only set such that ... contradiction.
+   * This works because of how we defined "the_only" for contradictory criteria
+   * (axiom_the_only_invalid).
+   *
    * empty = the_only a . false
    *
-   * the_only_invalid implies it's the empty set.
+   * This is simpler than the more obvious:
+   * empty = the_only a . all x . not (x in a)
    *)
   val empty : constant
 
@@ -198,7 +202,7 @@ sig
   val subset : constant
 
   (*
-   * Disjoint predicate.
+   * Disjoint sets predicate.
    *
    * disjoint a b = all x . not (x in a and x in b)
    *)
@@ -207,21 +211,25 @@ sig
   (*
    * Axiom for intensional definitions:
    *
+   * If there is exactly one set satisfying a given criterion P, then the_only P
+   * is that set.
+   *
    * exist1 p |- p (the_only p)
    *)
-  val the_only_intro : theorem
+  val axiom_the_only : theorem
 
   (*
    * Axiom for invalid intensional definitions.
    *
-   * If a definition is invalid, the_only p is the empty set:
+   * If a definition is invalid (there is not exactly one set satisfying
+   * the criterion), the_only p is the empty set:
    *
    * not (exist1 p) |- not (x in the_only p)
    *
    * As mentioned above, this is to ensure the_only has a unique interpretation
-   * in a given ZFC model.
+   * in a given ZFC model, and avoids having a separate axiom of empty set.
    *)
-  val the_only_invalid : theorem
+  val axiom_the_only_invalid : theorem
 
   (*
    * Axiom of extensionality.
@@ -301,9 +309,9 @@ struct
   | Set
   | DefinedType of string * term
 
-  and mf_type =
+  and type' =
     BaseType of base_type
-  | Operation of mf_type * mf_type
+  | Operation of type' * type'
 
   and constant =
     False
@@ -312,27 +320,27 @@ struct
   | All
   | In
   | TheOnly
-  | Defined of string * mf_type * term
+  | Defined of string * type' * term
 
   and term =
     Constant of constant
   | BoundVariable of int
   | FreeVariable of string
   | Application of term * term
-  | Lambda of string * mf_type * term
+  | Lambda of string * type' * term
 
   (*
    * Theorem (free variables, assumptions, conclusion).
    *)
   datatype theorem =
-    Theorem of (string * mf_type) list * term list * term
+    Theorem of (string * type') list * term list * term
 
   (*
    * Built-in bool type.
    *)
-  val bool_t = Bool
+  val bool' = Bool
 
-  val bool_type = BaseType bool_t
+  val bool_type = BaseType bool'
 
   (*
    * Built-in set type.
@@ -357,7 +365,7 @@ struct
     | (h::t) => h = x orelse contains(t, x)
 
   fun type_of_free_variable (name : string,
-                             free_vars : (string * mf_type) list) =
+                             free_vars : (string * type') list) =
     case free_vars of
       [] => raise Fail ("Unknown variable " ^ name ^ ".")
     | ((name', t)::other) =>
@@ -366,8 +374,8 @@ struct
         else type_of_free_variable(name, other)
 
   fun type_of_term (a : term,
-                    free_vars : (string * mf_type) list,
-                    bound_var_types : mf_type list) =
+                    free_vars : (string * type') list,
+                    bound_var_types : type' list) =
     case a of
       Constant c => type_of_constant c
     | BoundVariable i => List.nth (bound_var_types, i)
@@ -392,7 +400,7 @@ struct
   fun define (name : string, a : term) =
     Defined (name, type_of_term (a, [], []), a)
 
-  val false_c = False
+  val false' = False
 
   val implies = Implies
 
@@ -405,18 +413,18 @@ struct
   (*
    * Define: not p = (p => false).
    *)
-  val not_c =
+  val not' =
     define("not",
       Lambda("p", bool_type,
-        apply_implies(BoundVariable 0, Constant false_c)))
+        apply_implies(BoundVariable 0, Constant false')))
 
   fun apply_not(a : term) =
-    Application(Constant not_c, a)
+    Application(Constant not', a)
 
   (*
    * Define: p or q = (not p => q).
    *)
-  val or_c =
+  val or' =
     define("or",
       Lambda("p", bool_type,
         Lambda("q", bool_type,
@@ -429,12 +437,12 @@ struct
     )
 
   fun apply_or(a : term, b : term) =
-    apply2(or_c, a, b)
+    apply2(or', a, b)
 
   (*
    * Define: p and q = not (not p or not q).
    *)
-  val and_c =
+  val and' =
     define("and",
       Lambda("p", bool_type,
         Lambda("q", bool_type,
@@ -444,7 +452,7 @@ struct
     )
 
   fun apply_and(a : term, b : term) =
-    apply2(and_c, a, b)
+    apply2(and', a, b)
 
   fun apply_and_3(a : term, b : term, c : term) =
     apply_and(apply_and(a, b), c)
@@ -527,10 +535,10 @@ struct
   fun apply_exist1(name : string, p : term) =
     Application(Constant exist1, Lambda(name, set_type, p))
 
-  val in_c = In
+  val in' = In
 
   fun apply_in(a : term, b : term) =
-    apply2(in_c, a, b)
+    apply2(in', a, b)
 
   val the_only = TheOnly
 
@@ -539,7 +547,7 @@ struct
    *
    * Type-check just to make sure everything is type-correct.
    *)
-  fun axiom(free_vars: (string * mf_type) list,
+  fun axiom(free_vars: (string * type') list,
             assumptions : term list,
             conclusion : term) =
     if (List.all
@@ -556,11 +564,11 @@ struct
    * Defined in a hacky way:
    * empty = the_only a . false
    *
-   * the_only_invalid implies it's the empty set.
+   * axiom_the_only_invalid implies it's the empty set.
    *)
   val empty =
     define("empty",
-      Application(Constant the_only, Lambda("a", set_type, Constant false_c))
+      Application(Constant the_only, Lambda("a", set_type, Constant false'))
     )
 
   (*
@@ -608,7 +616,7 @@ struct
    *
    * exist1 p |- p (the_only p)
    *)
-  val the_only_intro =
+  val axiom_the_only =
     let
       val p = FreeVariable "p"
     in
@@ -623,7 +631,7 @@ struct
    *
    * not (exist1 p) |- not (x in the_only p)
    *)
-  val the_only_invalid =
+  val axiom_the_only_invalid =
     let
       val p = FreeVariable "p"
       val x = FreeVariable "x"
@@ -761,9 +769,9 @@ struct
    * There exists a nonempty set I, such that for every element there is another
    * larger element.
    *
-   * |- exist I .
-   *      I /= empty and
-   *      all x . x in I => exist y . y in I and y /= x and subset x y
+   * exist I .
+   *   I /= empty and
+   *   all x . x in I => exist y . y in I and y /= x and subset x y
    *)
   val axiom_infinity =
     axiom(
@@ -791,7 +799,6 @@ struct
   (*
    * Axiom of choice.
    *
-   * A:set,
    * all a . all b. a in A and b in A and a /= b => disjoint a b
    * |- exist C . all a . a in A => exist1 x . x in C and x in a
    *)
