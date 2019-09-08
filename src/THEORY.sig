@@ -4,5 +4,5 @@ sig
 
   type axiom
 
-  val axiom_statement : axiom -> Syntax.term
+  val axiom_statement : axiom -> Syntax.sequent
 end

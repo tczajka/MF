@@ -32,8 +32,6 @@ struct
   | Application of term * term
   | Lambda of string * mf_type * term
 
-  val symbol_constant = Symbol
-
   (*
    * Helper function to get the type of a primitive symbol.
    *)
@@ -81,6 +79,16 @@ struct
     | _ => NONE
 
   (*
+   * Built-in constants.
+   *)
+  val false' = False
+  val implies = Implies
+  val equal = Equal
+  val all = All
+  val the_only = TheOnly
+  val symbol = Symbol
+
+  (*
    * Helpers for define.
    *)
   fun type_of_free_variable (name : string,
@@ -112,125 +120,7 @@ struct
   fun define (name : string, a : term) =
     Defined (name, type_of_term (a, [], []), a)
 
-  val false' = False
-
-  val implies = Implies
-
-  fun apply2(c : constant, a : term, b : term) =
-    Application(Application(Constant c, a), b)
-
-  fun apply_implies(a : term, b : term) =
-    apply2(implies, a, b)
-
-  (*
-   * Define: not p = (p => false).
-   *)
-  val not' =
-    define("not",
-      Lambda("p", Bool,
-        apply_implies(BoundVariable 0, Constant false')))
-
-  fun apply_not(a : term) =
-    Application(Constant not', a)
-
-  (*
-   * Define: p or q = (not p => q).
-   *)
-  val or' =
-    define("or",
-      Lambda("p", Bool,
-        Lambda("q", Bool,
-          apply_implies(
-            apply_not(BoundVariable 1),
-            BoundVariable 0
-          )
-        )
-      )
-    )
-
-  (*
-   * Define: p and q = not (not p or not q).
-   *)
-  val and' =
-    define("and",
-      Lambda("p", Bool,
-        Lambda("q", Bool,
-          apply_not(apply2(or', apply_not(BoundVariable 1), apply_not(BoundVariable 0)))
-        )
-      )
-    )
-
-  (*
-   * Define: p <=> q = (p => q) and (q => p).
-   *)
-  val iff =
-    define("<=>",
-      Lambda("p", Bool,
-        Lambda("q", Bool,
-          apply2(
-            and',
-            apply_implies(BoundVariable 1, BoundVariable 0),
-            apply_implies(BoundVariable 0, BoundVariable 1)
-          )
-        )
-      )
-    )
-
-  val equal = Equal
-
-  (*
-   * Define a /= b  =  not (a=b).
-   *)
-  fun not_equal (t : Prim.prim_type) =
-    define("/=",
-      Lambda("a", PrimitiveType t,
-        Lambda("b", PrimitiveType t,
-          apply_not(apply2(equal t, BoundVariable 1, BoundVariable 0))
-        )
-      )
-    )
-
-  val all = All
-
-  fun apply_all(name : string, t : Prim.prim_type, p : term) =
-    Application(Constant (all t), Lambda(name, PrimitiveType t, p))
-
-  (*
-   * Define: exist p = not (all x . not (p x)).
-   *)
-  fun exist (t : Prim.prim_type) =
-    define("exist",
-      Lambda("p", Function(PrimitiveType t, Bool),
-        apply_not(apply_all("x", t, apply_not(
-          Application(BoundVariable 1, BoundVariable 0)
-        )))
-      )
-    )
-
-  fun apply_exist(name : string, t : Prim.prim_type, p : term) =
-    Application(Constant (exist t), Lambda(name, PrimitiveType t, p))
-
-  (*
-   * Defined: exist1 p = exist x . all y . (p y <=> y = x)
-   *)
-  fun exist1 (t : Prim.prim_type) =
-    define("exist1",
-      Lambda("p", Function(PrimitiveType t, Bool),
-        apply_exist("x", t,
-          apply_all("y", t,
-            apply2(
-              iff,
-              Application(BoundVariable 2, BoundVariable 0),
-              apply2(equal t, BoundVariable 0, BoundVariable 1)
-            )
-          )
-        )
-      )
-    )
-
-  val the_only = TheOnly
-
-  datatype claim = Claim of {
+  datatype sequent = Sequent of {
     free_vars : string * mf_type list,
     assumptions : term list,
     conclusion : term
