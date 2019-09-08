@@ -1,0 +1,7 @@
+$(SML_LIB)/basis/basis.mlb
+../PeanoArithmetic/PeanoArithmetic.mlb
+../ZFC/ZFC.mlb
+TESTS.sig
+Tests.sml
+PeanoTests.sml
+ZfcTests.sml

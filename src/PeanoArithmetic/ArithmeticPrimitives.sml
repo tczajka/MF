@@ -12,9 +12,7 @@
  *)
 structure ArithmeticPrimitives : PRIMITIVES =
 struct
-  datatype prim_type = Natural
-
-  datatype symbol = Zero | Successor
+  open ArithmeticSymbols
 
   fun
     symbol_type Zero = {

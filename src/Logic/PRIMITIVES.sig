@@ -3,7 +3,6 @@
  *)
 signature PRIMITIVES =
 sig
-
   (* The type of primitive types. *)
   eqtype prim_type
 

@@ -1,9 +1,11 @@
 (*
  * Syntax of MF.
  *)
-functor Syntax (Prim : PRIMITIVES) :> SYNTAX =
+functor Syntax (P : PRIMITIVES) :>
+  SYNTAX where type Prim.prim_type = P.prim_type and
+               type Prim.symbol = P.symbol =
 struct
-  structure Prim = Prim
+  structure Prim = P
 
   (*
    * The type of first-order types.

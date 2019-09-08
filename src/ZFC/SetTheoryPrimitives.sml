@@ -9,9 +9,7 @@
  *)
 structure SetTheoryPrimitives : PRIMITIVES =
 struct
-  datatype prim_type = Set
-
-  datatype symbol = In
+  open SetTheorySymbols
 
   fun symbol_type In = {
     arguments = [Set, Set],

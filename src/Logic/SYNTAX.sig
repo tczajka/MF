@@ -47,7 +47,7 @@ sig
   val define : string * term -> constant
 
   (*
-   * A sequence |-
+   * A sequent assumptions |- conclusion.
    *)
   datatype sequent = Sequent of {
     free_vars : string * mf_type list,
