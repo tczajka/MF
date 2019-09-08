@@ -1,15 +1,10 @@
 (*
  * Signature of set theory.
- *
- * One primitive type of sets:
- * set
- *
- * One primitive relation:
- * in : set -> set
  *)
-structure SetTheoryPrimitives : PRIMITIVES =
+structure SetTheoryPrimitives : SET_THEORY_PRIMITIVES =
 struct
-  open SetTheorySymbols
+  datatype prim_type = Set
+  datatype symbol = In
 
   fun symbol_type In = {
     arguments = [Set, Set],

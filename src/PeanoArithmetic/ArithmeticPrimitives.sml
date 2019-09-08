@@ -1,18 +1,7 @@
-(*
- * Signature of a theory of arithmetic.
- *
- * One primitive type of natural numbers:
- * nat 
- *
- * One primitive constant of zero:
- * 0 : nat
- *
- * One primitive function:
- * successor : nat -> nat.
- *)
-structure ArithmeticPrimitives : PRIMITIVES =
+structure ArithmeticPrimitives : ARITHMETIC_PRIMITIVES =
 struct
-  open ArithmeticSymbols
+  datatype prim_type = Natural
+  datatype symbol = Zero | Successor
 
   fun
     symbol_type Zero = {
@@ -28,5 +17,4 @@ struct
 
   fun symbol_name Zero = "0"
     | symbol_name Successor = "successor"
-
 end

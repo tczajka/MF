@@ -1,10 +1,10 @@
-structure PeanoArithmetic : THEORY =
+structure PeanoArithmetic : PEANO_ARITHMETIC =
 struct
   structure Syntax = Syntax(ArithmeticPrimitives)
 
   datatype axiom =
     AxiomZeroNotSuccessor
-  | AxiomSuccessorIsBijection
+  | AxiomSuccessorDifferent
   | AxiomOfInduction
 
   fun axiom_statement _= raise Fail "not implemented"

@@ -1,4 +1,5 @@
 ../Logic/Logic.mlb
-SetTheorySymbols.sml
+SET_THEORY_PRIMITIVES.sig
 SetTheoryPrimitives.sml
+ZFC.sig
 Zfc.sml

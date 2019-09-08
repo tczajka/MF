@@ -1,4 +1,5 @@
 ../Logic/Logic.mlb
-ArithmeticSymbols.sml
+ARITHMETIC_PRIMITIVES.sig
 ArithmeticPrimitives.sml
+PEANO_ARITHMETIC.sig
 PeanoArithmetic.sml

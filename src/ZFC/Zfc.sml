@@ -1,4 +1,7 @@
-structure Zfc : THEORY =
+(*
+ * The Zermelo-Fraenkel axiomatics of set theory with the Axiom of Choice.
+ *)
+structure Zfc : ZFC =
 struct
   structure Syntax = Syntax(SetTheoryPrimitives)
 
