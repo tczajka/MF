@@ -1,4 +1,6 @@
 (*
+ * DEPRECTATED
+ *
  * First-order logic and ZFC axioms.
  *
  * This is the trusted logical core of the MF system.
@@ -361,11 +363,6 @@ struct
     | In => Operation (set_type, Operation (set_type, bool_type))
     | TheOnly => Operation (Operation (set_type, bool_type), set_type)
     | Defined (_, t, _) => t
-
-  fun contains (l : ''a list, x : ''a) =
-    case l of
-      [] => false
-    | (h::t) => h = x orelse contains(t, x)
 
   fun type_of_free_variable (name : string,
                              free_vars : (string * type') list) =
