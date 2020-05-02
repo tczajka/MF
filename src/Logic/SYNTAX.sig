@@ -23,11 +23,11 @@ sig
   datatype term =
     Constant of constant
   | BoundVariable of int
-  | FreeVariable of string
+  | FreeVariable of Identifier.t
   | Application of term * term
-  | Lambda of string * mf_type * term
+  | Lambda of Identifier.t * mf_type * term
 
-  val name_of_constant : constant -> string
+  val name_of_constant : constant -> Identifier.t
   val type_of_constant : constant -> mf_type
   val definition_of_constant : constant -> term option
 
@@ -44,13 +44,13 @@ sig
   (*
    * Define a new constant.
    *)
-  val define : string * term -> constant
+  val define : Identifier.t * term -> constant
 
   (*
    * A sequent assumptions |- conclusion.
    *)
   datatype sequent = Sequent of {
-    free_vars : string * mf_type list,
+    free_vars : Identifier.t * mf_type list,
     assumptions : term list,
     conclusion : term
   }

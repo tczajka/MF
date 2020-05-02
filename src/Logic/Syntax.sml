@@ -25,14 +25,14 @@ struct
   | All of Prim.prim_type
   | TheOnly of Prim.prim_type
   | Symbol of Prim.symbol
-  | Defined of string * mf_type * term
+  | Defined of Identifier.t * mf_type * term
 
   and term =
     Constant of constant
   | BoundVariable of int
-  | FreeVariable of string
+  | FreeVariable of Identifier.t
   | Application of term * term
-  | Lambda of string * mf_type * term
+  | Lambda of Identifier.t * mf_type * term
 
   (*
    * Helper function to get the type of a primitive symbol.
@@ -49,7 +49,7 @@ struct
     in symbol_type_rec (arguments, result)
     end
 
-  fun name_of_constant (c : constant) : string =
+  fun name_of_constant (c : constant) : Identifier.t =
     case c of
       False => "false"
     | Implies => "=>"
@@ -93,8 +93,8 @@ struct
   (*
    * Helpers for define.
    *)
-  fun type_of_free_variable (name : string,
-                             free_vars : (string * mf_type) list) : mf_type =
+  fun type_of_free_variable (name : Identifier.t,
+                             free_vars : (Identifier.t * mf_type) list) : mf_type =
     case free_vars of
       [] => raise Fail ("Unknown variable " ^ name ^ ".")
     | (name', t)::other =>
@@ -103,7 +103,7 @@ struct
         else type_of_free_variable(name, other)
 
   fun type_of_term (a : term,
-                    free_vars : (string * mf_type) list,
+                    free_vars : (Identifier.t * mf_type) list,
                     bound_var_types : mf_type list) : mf_type =
     case a of
       Constant c => type_of_constant c
@@ -119,11 +119,11 @@ struct
     | Lambda (_, t, v) =>
         Function (t, type_of_term (v, free_vars, t :: bound_var_types))
 
-  fun define (name : string, a : term) =
+  fun define (name : Identifier.t, a : term) =
     Defined (name, type_of_term (a, [], []), a)
 
   datatype sequent = Sequent of {
-    free_vars : string * mf_type list,
+    free_vars : Identifier.t * mf_type list,
     assumptions : term list,
     conclusion : term
   }

@@ -17,9 +17,9 @@ sig
   }
 
   (* Name of a primitive type. *)
-  val prim_type_name : prim_type -> string
+  val prim_type_name : prim_type -> Identifier.t
 
   (* Name of a symbol. *)
-  val symbol_name : symbol -> string
+  val symbol_name : symbol -> Identifier.t
 
 end
